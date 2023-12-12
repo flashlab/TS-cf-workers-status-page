@@ -61,17 +61,20 @@ export async function processCronTrigger(event) {
     const monitorStatusChanged =
       monitorsState.monitors[monitor.id].lastCheck.operational !==
       monitorOperational
+    const monitorNotice = monitor.notice && (monitorOperational ^! monitorStatusChanged) && (monitorOperational ^ monitorsState.monitors[monitor.id].lastCheck.suspect)
+    const monitorSuspect = monitorStatusChanged && !monitorOperational
 
     // Save monitor's last check response status
     monitorsState.monitors[monitor.id].lastCheck = {
       status: checkResponse.status,
       statusText: checkResponse.statusText,
       operational: monitorOperational,
+      suspect: monitorSuspect,
     }
 
     // Send Slack message on monitor change
     if (
-      monitorStatusChanged &&
+      monitorNotice &&
       typeof SECRET_SLACK_WEBHOOK_URL !== 'undefined' &&
       SECRET_SLACK_WEBHOOK_URL !== 'default-gh-action-secret'
     ) {
@@ -80,7 +83,7 @@ export async function processCronTrigger(event) {
 
     // Send Telegram message on monitor change
     if (
-      monitorStatusChanged &&
+      monitorNotice &&
       typeof SECRET_TELEGRAM_API_TOKEN !== 'undefined' &&
       SECRET_TELEGRAM_API_TOKEN !== 'default-gh-action-secret' &&
       typeof SECRET_TELEGRAM_CHAT_ID !== 'undefined' &&
@@ -91,7 +94,7 @@ export async function processCronTrigger(event) {
 
     // Send Discord message on monitor change
     if (
-      monitorStatusChanged &&
+      monitorNotice &&
       typeof SECRET_DISCORD_WEBHOOK_URL !== 'undefined' &&
       SECRET_DISCORD_WEBHOOK_URL !== 'default-gh-action-secret'
     ) {
